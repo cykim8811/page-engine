@@ -1,0 +1,141 @@
+// usePageLogic.ts
+import { useState, useCallback, useEffect } from "react";
+import { useScroll } from "@/hooks/useScroll";
+import { PageConfig } from "@/config";
+import { CellData } from "../components/Cell";
+
+export const usePageLogic = (config: PageConfig) => {
+    const { offset: rawScreenOffset, ref } = useScroll();
+    const screenOffset = {
+        x: Math.round(rawScreenOffset.x / config.gridSize.width) * config.gridSize.width,
+        y: Math.round(rawScreenOffset.y / config.gridSize.height) * config.gridSize.height,
+    };
+
+    const [selectionStart, setSelectionStart] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+    const [selectionEnd, setSelectionEnd] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+    const [isDragging, setIsDragging] = useState(false);
+    const [mode, setMode] = useState<"select" | "insert">("select");
+    const [insertValue, setInsertValue] = useState<string>("");
+
+    const cellData: { [key: string]: CellData } = {
+        "10928": {
+            pos: { x: 1, y: 1 },
+            size: { width: 4, height: 4 },
+        },
+    };
+    const handleMouseDown = useCallback((e: React.MouseEvent) => {
+        const x = Math.floor((e.clientX + screenOffset.x) / config.gridSize.width);
+        const y = Math.floor((e.clientY + screenOffset.y) / config.gridSize.height);
+        if (mode === "insert" && x >= selectionStart.x && x <= selectionEnd.x && y >= selectionStart.y && y <= selectionEnd.y) {
+            return;
+        }
+        setMode("select");
+        setSelectionStart({ x, y });
+        setSelectionEnd({ x, y });
+        setIsDragging(true);
+    }, [screenOffset, config.gridSize]);
+
+    const handleMouseMove = useCallback((e: React.MouseEvent) => {
+        if (!isDragging) return;
+
+        const x = Math.floor((e.clientX + screenOffset.x) / config.gridSize.width);
+        const y = Math.floor((e.clientY + screenOffset.y) / config.gridSize.height);
+        setSelectionEnd({ x, y });
+    }, [isDragging, screenOffset, config.gridSize]);
+
+    const handleMouseUp = useCallback(() => {
+        setIsDragging(false);
+    }, []);
+
+    const handleKeyDown = useCallback((e: KeyboardEvent) => {
+        if (mode === "select") {
+            if (e.key === "i") {
+                setMode("insert");
+                setSelectionEnd(selectionStart);
+            } else if (e.key === "ArrowLeft" || e.key === "h") {
+                if (e.shiftKey) {
+                    setSelectionEnd((prev) => ({ x: prev.x - 1, y: prev.y }));
+                } else {
+                    setSelectionStart((prev) => {
+                        const result = { x: prev.x - 1, y: prev.y };
+                        setSelectionEnd(result);
+                        return result;
+                    });
+                }
+            } else if (e.key === "ArrowRight" || e.key === "l") {
+                if (e.shiftKey) {
+                    setSelectionEnd((prev) => ({ x: prev.x + 1, y: prev.y }));
+                } else {
+                    setSelectionStart((prev) => {
+                        const result = { x: prev.x + 1, y: prev.y };
+                        setSelectionEnd(result);
+                        return result;
+                    });
+                }
+            } else if (e.key === "ArrowUp" || e.key === "k") {
+                if (e.shiftKey) {
+                    setSelectionEnd((prev) => ({ x: prev.x, y: prev.y - 1 }));
+                } else {
+                    setSelectionStart((prev) => {
+                        const result = { x: prev.x, y: prev.y - 1 };
+                        setSelectionEnd(result);
+                        return result;
+                    });
+                }
+            } else if (e.key === "ArrowDown" || e.key === "j") {
+                if (e.shiftKey) {
+                    setSelectionEnd((prev) => ({ x: prev.x, y: prev.y + 1 }));
+                } else {
+                    setSelectionStart((prev) => {
+                        const result = { x: prev.x, y: prev.y + 1 };
+                        setSelectionEnd(result);
+                        return result;
+                    });
+                }
+            }
+        } else if (mode === "insert") {
+            if (e.key === "Escape") {
+                setMode("select");
+            }
+        }
+    }, [mode, selectionStart, setSelectionStart, setSelectionEnd]);
+
+    useEffect(() => {
+        if (mode === "insert") {
+            setSelectionEnd({
+                x: selectionStart.x + insertValue.length - 1,
+                y: selectionStart.y
+            });
+        }
+    }, [mode, selectionStart, insertValue]);
+
+    useEffect(() => {
+        if (mode === "insert") {
+            setSelectionEnd({
+                x: selectionStart.x + insertValue.length - 1,
+                y: selectionStart.y
+            });
+        }
+    }, [mode, selectionStart, insertValue]);
+
+    useEffect(() => {
+        window.addEventListener("keydown", handleKeyDown);
+        return () => {
+            window.removeEventListener("keydown", handleKeyDown);
+        };
+    }, [handleKeyDown]);
+
+    return {
+        ref,
+        screenOffset,
+        selectionStart,
+        selectionEnd,
+        mode,
+        insertValue,
+        cellData,
+        handleMouseDown,
+        handleMouseMove,
+        handleMouseUp,
+        setInsertValue,
+    };
+};
