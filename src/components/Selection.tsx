@@ -23,7 +23,7 @@ export const Selection: React.FC<SelectionProps> = ({ mode, config, screenOffset
             top: top * config.gridSize.height + screenOffset.y - 1,
             width: (right - left + 1) * config.gridSize.width + 3,
             height: (bottom - top + 1) * config.gridSize.height + 3,
-            backgroundColor: mode === "select" ? "#bfdbfe50" : "#00000000",
+            backgroundColor: mode === "select" ? "#bfdbfe30" : "#00000000",
             borderColor: mode === "select" ? "#60a5fa" : "#9ca3af",
             borderWidth: 3,
             transition: "background-color 0.05s, border-color 0.05s, left 0.05s, top 0.05s, width 0.05s, height 0.05s",
@@ -33,12 +33,11 @@ export const Selection: React.FC<SelectionProps> = ({ mode, config, screenOffset
     const selectionStartStyle = useCallback(() => {
         return {
             position: "absolute" as const,
-            left: selectionStart.x * config.gridSize.width + screenOffset.x - 1,
-            top: selectionStart.y * config.gridSize.height + screenOffset.y - 1,
-            width: config.gridSize.width + 3,
-            height: config.gridSize.height + 3,
-            borderColor: "#60a5fa69",
-            borderWidth: 3,
+            left: selectionStart.x * config.gridSize.width + screenOffset.x + 1,
+            top: selectionStart.y * config.gridSize.height + screenOffset.y + 1,
+            width: config.gridSize.width - 1,
+            height: config.gridSize.height - 1,
+            backgroundColor: "#bfdbfe40",
             transition: "background-color 0.05s, border-color 0.05s, left 0.05s, top 0.05s, width 0.05s, height 0.05s",
         };
     }, [selectionStart, config.gridSize, screenOffset]);

@@ -36,12 +36,12 @@ export const usePageLogic = (config: PageConfig) => {
     const [insertValue, setInsertValue] = useState<string>("");
     const [lastClickTime, setLastClickTime] = useState<number>(0);
 
-    const cellData: { [key: string]: CellData } = {
+    const [cellData, setCellData] = useState<{ [key: string]: CellData }>({
         "10928": {
             pos: { x: 1, y: 1 },
             size: { width: 4, height: 4 },
         },
-    };
+    });
 
     const handleMouseDown = useCallback((e: React.MouseEvent) => {
         const x = Math.floor((e.clientX + screenOffset.x) / config.gridSize.width);
@@ -54,14 +54,29 @@ export const usePageLogic = (config: PageConfig) => {
             setSelectionEnd({ x, y });
             setInsertValue("");
             setMode("insert");
+        } else if (mode === "insert" && x >= selectionStart.x && x <= selectionEnd.x && y >= selectionStart.y && y <= selectionEnd.y) {
+            return;
         } else {
-            if (mode === "insert" && x >= selectionStart.x && x <= selectionEnd.x && y >= selectionStart.y && y <= selectionEnd.y) {
-                return;
+            // check if the position is in a cell
+            let cellKey = "";
+            for (const key in cellData) {
+                const cell = cellData[key];
+                if (x >= cell.pos.x && x < cell.pos.x + cell.size.width && y >= cell.pos.y && y < cell.pos.y + cell.size.height) {
+                    cellKey = key;
+                    break;
+                }
             }
-            setMode("select");
-            setSelectionStart({ x, y });
-            setSelectionEnd({ x, y });
-            setIsDragging(true);
+            if (cellKey) {
+                const cell = cellData[cellKey];
+                setMode("select");
+                setSelectionStart(cell.pos);
+                setSelectionEnd({ x: cell.pos.x + cell.size.width - 1, y: cell.pos.y + cell.size.height - 1 });
+            } else {
+                setMode("select");
+                setSelectionStart({ x, y });
+                setSelectionEnd({ x, y });
+                setIsDragging(true);
+            }
         }
 
         setLastClickTime(currentTime);

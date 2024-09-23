@@ -30,7 +30,7 @@ export const Page: React.FC<PageProps> = ({ config }) => {
 
   return (
     <div
-      className="w-full h-full bg-white cursor-cell"
+      className="relative overflow-hidden w-full h-full bg-white cursor-cell"
       style={gridStyle}
       ref={ref}
       onMouseDown={handleMouseDown}
