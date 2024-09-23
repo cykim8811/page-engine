@@ -32,7 +32,10 @@ export const usePageLogic = (config: PageConfig) => {
     const [cursorPos, setCursorPos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
     const [selectionStart, setSelectionStart] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
     const [selectionEnd, setSelectionEnd] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
-    const [isDragging, setIsDragging] = useState(false);
+    const [isSelectingDragging, setIsSelectingDragging] = useState(false);
+    const [isMovingDragging, setIsMovingDragging] = useState(false);
+    const [movingDraggingTarget, setMovingDraggingTarget] = useState<string>("");
+    const [movingDraggingOffset, setMovingDraggingOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
     const [mode, setMode] = useState<"select" | "insert">("select");
     const [insertValue, setInsertValue] = useState<string>("");
     const [lastClickTime, setLastClickTime] = useState<number>(0);
@@ -45,6 +48,41 @@ export const usePageLogic = (config: PageConfig) => {
         },
     });
 
+    function getCellAt(x: number, y: number): string | undefined {
+        // Find the smallest cell that contains the point (x, y)
+        let cellKey = "";
+        let smallestCellSize = Infinity;
+        for (const key in cellData) {
+            const cell = cellData[key];
+            if (x >= cell.pos.x && x < cell.pos.x + cell.size.width && y >= cell.pos.y && y < cell.pos.y + cell.size.height) {
+                const cellSize = cell.size.width * cell.size.height;
+                if (cellSize < smallestCellSize) {
+                    cellKey = key;
+                    smallestCellSize = cellSize;
+                }
+            }
+        }
+        return cellKey;
+    }
+
+    function getLargestCellAt(x: number, y: number): string | undefined {
+        // Find the largest cell that contains the point (x, y)
+        let cellKey = "";
+        let largestCellSize = 0;
+        for (const key in cellData) {
+            const cell = cellData[key];
+            if (x >= cell.pos.x && x < cell.pos.x + cell.size.width && y >= cell.pos.y && y < cell.pos.y + cell.size.height) {
+                const cellSize = cell.size.width * cell.size.height;
+                if (cellSize > largestCellSize) {
+                    cellKey = key;
+                    largestCellSize = cellSize;
+                }
+            }
+        }
+        return cellKey;
+    }
+
+
     const handleMouseDown = useCallback((e: React.MouseEvent) => {
         if (e.button !== 0) return;
         const x = Math.floor((e.clientX - screenOffset.x) / config.gridSize.width);
@@ -52,7 +90,9 @@ export const usePageLogic = (config: PageConfig) => {
         const currentTime = new Date().getTime();
         const timeDiff = currentTime - lastClickTime;
 
-        if (timeDiff < 300 && x === selectionStart.x && y === selectionStart.y) {
+        const cellKey = getCellAt(x, y);
+
+        if (timeDiff < 300 && x === cursorPos.x && y === cursorPos.y && !cellKey) {
             setCursorPos({ x, y });
             setSelectionStart({ x, y });
             setSelectionEnd({ x, y });
@@ -60,28 +100,42 @@ export const usePageLogic = (config: PageConfig) => {
             setMode("insert");
         } else if (mode === "insert" && x >= selectionStart.x && x <= selectionEnd.x && y >= selectionStart.y && y <= selectionEnd.y) {
             return;
-        } else {
-            // check if the position is in a cell
-            let cellKey = "";
-            for (const key in cellData) {
-                const cell = cellData[key];
-                if (x >= cell.pos.x && x < cell.pos.x + cell.size.width && y >= cell.pos.y && y < cell.pos.y + cell.size.height) {
-                    cellKey = key;
-                    break;
-                }
+        } else if (mode === "insert") {
+            if (insertValue !== "") {
+                const newCellKey = Object.keys(cellData).length + 1;
+                setCellData({
+                    ...cellData,
+                    [newCellKey]: {
+                        pos: selectionStart,
+                        size: {
+                            width: selectionEnd.x - selectionStart.x + 1,
+                            height: selectionEnd.y - selectionStart.y + 1,
+                        },
+                        value: insertValue,
+                    },
+                });
             }
+            setCursorPos({ x, y });
+            setSelectionStart({ x, y });
+            setSelectionEnd({ x, y });
+            setInsertValue("");
+            setMode("select");
+        } else {
             if (cellKey) {
                 const cell = cellData[cellKey];
                 setMode("select");
                 setCursorPos({ x, y });
                 setSelectionStart(cell.pos);
                 setSelectionEnd({ x: cell.pos.x + cell.size.width - 1, y: cell.pos.y + cell.size.height - 1 });
+                setIsMovingDragging(true);
+                setMovingDraggingTarget(cellKey);
+                setMovingDraggingOffset({ x: x - cell.pos.x, y: y - cell.pos.y });
             } else {
                 setMode("select");
                 setCursorPos({ x, y });
                 setSelectionStart({ x, y });
                 setSelectionEnd({ x, y });
-                setIsDragging(true);
+                setIsSelectingDragging(true);
             }
         }
 
@@ -89,40 +143,69 @@ export const usePageLogic = (config: PageConfig) => {
     }, [screenOffset, config.gridSize, lastClickTime, selectionStart, mode, selectionEnd]);
 
     const handleMouseMove = useCallback((e: React.MouseEvent) => {
-        if (!isDragging) return;
-
-        const x = Math.floor((e.clientX - screenOffset.x) / config.gridSize.width);
-        const y = Math.floor((e.clientY - screenOffset.y) / config.gridSize.height);
-        setSelectionEnd({ x, y });
-    }, [isDragging, screenOffset, config.gridSize]);
+        if (isSelectingDragging) {
+            const x = Math.floor((e.clientX - screenOffset.x) / config.gridSize.width);
+            const y = Math.floor((e.clientY - screenOffset.y) / config.gridSize.height);
+            setCursorPos({ x, y });
+            setSelectionEnd({ x, y });
+        } else if (isMovingDragging) {
+            const x = Math.floor((e.clientX - screenOffset.x) / config.gridSize.width);
+            const y = Math.floor((e.clientY - screenOffset.y) / config.gridSize.height);
+            if (movingDraggingTarget) {
+                const cell = cellData[movingDraggingTarget];
+                const newCellData = { ...cellData };
+                newCellData[movingDraggingTarget] = {
+                    ...cell,
+                    pos: { x: x - movingDraggingOffset.x, y: y - movingDraggingOffset.y },
+                };
+                setCellData(newCellData);
+                setCursorPos({ x, y });
+                setSelectionStart({ x: x - movingDraggingOffset.x, y: y - movingDraggingOffset.y });
+                setSelectionEnd({ x: x - movingDraggingOffset.x + cell.size.width - 1, y: y - movingDraggingOffset.y + cell.size.height - 1 });
+            }
+        }
+    }, [isSelectingDragging, screenOffset, config.gridSize, cellData, movingDraggingOffset]);
 
     const handleMouseUp = useCallback(() => {
-        setIsDragging(false);
+        setIsSelectingDragging(false);
+        setIsMovingDragging(false);
     }, []);
 
     const handleKeyDown = useCallback((e: KeyboardEvent) => {
         if (mode === "select") {
             const moveSelection = (dx: number, dy: number) => {
+                const sourceCellKey = getLargestCellAt(cursorPos.x, cursorPos.y);
+                const destCellKey = getCellAt(cursorPos.x + dx, cursorPos.y + dy);
                 const originalPos = e.shiftKey ? selectionEnd : cursorPos;
                 const newPos = { x: originalPos.x + dx, y: originalPos.y + dy };
                 if (e.shiftKey) {
-                    setSelectionEnd(newPos);
-                } else {
                     setCursorPos(newPos);
-                    // Check if newPos is in the cell
-                    let cellKey = "";
-                    for (const key in cellData) {
-                        const cell = cellData[key];
-                        if (newPos.x >= cell.pos.x && newPos.x < cell.pos.x + cell.size.width && newPos.y >= cell.pos.y && newPos.y < cell.pos.y + cell.size.height) {
-                            cellKey = key;
-                            break;
+                    setSelectionEnd(newPos);
+                } else if (e.ctrlKey && sourceCellKey && !e.shiftKey) {
+                    // move cell
+                    const cell = cellData[sourceCellKey];
+                    const newCellData = { ...cellData };
+                    newCellData[sourceCellKey] = {
+                        ...cell,
+                        pos: {
+                            x: cell.pos.x + dx,
+                            y: cell.pos.y + dy,
                         }
-                    }
-                    if (cellKey) {
-                        const cell = cellData[cellKey];
-                        setSelectionStart(cell.pos);
-                        setSelectionEnd({ x: cell.pos.x + cell.size.width - 1, y: cell.pos.y + cell.size.height - 1 });
+                    };
+                    setCellData(newCellData);
+                    setCursorPos(newPos);
+                    setSelectionStart((prev) => ({ x: prev.x + dx, y: prev.y + dy }));
+                    setSelectionEnd((prev) => ({ x: prev.x + dx, y: prev.y + dy }));
+                } else {
+                    if (destCellKey) {
+                        if (!e.ctrlKey) {
+                            setCursorPos(newPos);
+                            const cell = cellData[destCellKey];
+                            setSelectionStart(cell.pos);
+                            setSelectionEnd({ x: cell.pos.x + cell.size.width - 1, y: cell.pos.y + cell.size.height - 1 });
+                        }
                     } else {
+                        setCursorPos(newPos);
                         setSelectionStart(newPos);
                         setSelectionEnd(newPos);
                     }
@@ -169,18 +252,20 @@ export const usePageLogic = (config: PageConfig) => {
             if (e.key === "Escape") {
                 setMode("select");
             } else if (e.key === "Enter") {
-                const cellKey = Object.keys(cellData).length + 1;
-                setCellData({
-                    ...cellData,
-                    [cellKey]: {
-                        pos: selectionStart,
-                        size: {
-                            width: selectionEnd.x - selectionStart.x + 1,
-                            height: selectionEnd.y - selectionStart.y + 1,
+                if (insertValue !== "") {
+                    const newCellKey = Object.keys(cellData).length + 1;
+                    setCellData({
+                        ...cellData,
+                        [newCellKey]: {
+                            pos: selectionStart,
+                            size: {
+                                width: selectionEnd.x - selectionStart.x + 1,
+                                height: selectionEnd.y - selectionStart.y + 1,
+                            },
+                            value: insertValue,
                         },
-                        value: insertValue,
-                    },
-                });
+                    });
+                }
                 setCursorPos({ x: selectionStart.x, y: selectionStart.y });
                 setSelectionStart({ x: selectionStart.x, y: selectionStart.y });
                 setInsertValue("");

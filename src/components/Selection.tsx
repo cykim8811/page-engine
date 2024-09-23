@@ -28,6 +28,7 @@ export const Selection: React.FC<SelectionProps> = ({ mode, config, screenOffset
             borderColor: mode === "select" ? "#60a5fa" : "#9ca3af",
             borderWidth: 3,
             transition: "background-color 0.05s, border-color 0.05s, left 0.05s, top 0.05s, width 0.05s, height 0.05s",
+            pointerEvents: "none" as const,
         };
     }, [selectionStart, selectionEnd, config.gridSize, screenOffset, mode]);
 
@@ -38,7 +39,7 @@ export const Selection: React.FC<SelectionProps> = ({ mode, config, screenOffset
             top: cursorPos.y * config.gridSize.height + screenOffset.y + 1,
             width: config.gridSize.width - 1,
             height: config.gridSize.height - 1,
-            backgroundColor: "#bfdbfe40",
+            backgroundColor: "#547bee30",
             transition: "background-color 0.05s, border-color 0.05s, left 0.05s, top 0.05s, width 0.05s, height 0.05s",
         };
     }, [cursorPos, config.gridSize, screenOffset]);
