@@ -109,6 +109,23 @@ export const usePageLogic = (config: PageConfig) => {
                 }
             };
 
+            const deleteSelection = () => {
+                const newCellData = { ...cellData };
+                const left = Math.min(selectionStart.x, selectionEnd.x);
+                const right = Math.max(selectionStart.x, selectionEnd.x);
+                const top = Math.min(selectionStart.y, selectionEnd.y);
+                const bottom = Math.max(selectionStart.y, selectionEnd.y);
+
+                for (const key in cellData) {
+                    const cell = cellData[key];
+                    if (cell.pos.x >= left && cell.pos.x + cell.size.width - 1 <= right && cell.pos.y >= top && cell.pos.y + cell.size.height - 1 <= bottom) {
+                        delete newCellData[key];
+                    }
+                }
+
+                setCellData(newCellData);
+            }
+
             const keyActions: { [key: string]: () => void } = {
                 'i': () => {
                     setMode("insert");
@@ -122,6 +139,8 @@ export const usePageLogic = (config: PageConfig) => {
                 'k': () => moveSelection(0, -1),
                 'arrowdown': () => moveSelection(0, 1),
                 'j': () => moveSelection(0, 1),
+                'backspace': deleteSelection,
+                'delete': deleteSelection,
             };
 
             const action = keyActions[e.key.toLowerCase()];
@@ -142,6 +161,7 @@ export const usePageLogic = (config: PageConfig) => {
                         value: insertValue,
                     },
                 });
+                setSelectionStart({ x: selectionStart.x, y: selectionStart.y });
                 setInsertValue("");
                 setMode("select");
             }
@@ -151,7 +171,7 @@ export const usePageLogic = (config: PageConfig) => {
     useEffect(() => {
         if (mode === "insert") {
             setSelectionEnd({
-                x: selectionStart.x + Math.max(0, Math.floor(0.05 + getTextWidth(insertValue, insertRef.current) / config.gridSize.width)),
+                x: selectionStart.x + Math.max(0, Math.floor((getTextWidth(insertValue, insertRef.current) + 4) / config.gridSize.width)),
                 y: selectionStart.y,
             });
         }

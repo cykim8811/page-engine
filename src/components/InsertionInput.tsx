@@ -51,6 +51,7 @@ export const InsertionInput: React.FC<InsertionInputProps> = ({
             display: "flex",
             flexDirection: "column",
             justifyContent: "center",
+            paddingLeft: 2,
         };
     }, [selectionStart, selectionEnd, config.gridSize, screenOffset]);
 
