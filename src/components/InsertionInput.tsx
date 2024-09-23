@@ -30,7 +30,7 @@ export const InsertionInput: React.FC<InsertionInputProps> = ({
         }
     }, []);
 
-    const insertionStyle = useCallback(() => {
+    const insertionStyle: () => React.CSSProperties = useCallback(() => {
         const left = Math.min(selectionStart.x, selectionEnd.x);
         const top = Math.min(selectionStart.y, selectionEnd.y);
         const right = Math.max(selectionStart.x, selectionEnd.x);
@@ -48,6 +48,9 @@ export const InsertionInput: React.FC<InsertionInputProps> = ({
             transition: "background-color 0.05s, border-color 0.05s, left 0.05s, top 0.05s, width 0.05s, height 0.05s",
             outline: "none",
             fontSize: config.gridSize.height * 0.7,
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "center",
         };
     }, [selectionStart, selectionEnd, config.gridSize, screenOffset]);
 
