@@ -13,6 +13,7 @@ export interface PageProps {
 export const Page: React.FC<PageProps> = ({ config }) => {
   const {
     ref,
+    insertRef,
     screenOffset,
     selectionStart,
     selectionEnd,
@@ -51,6 +52,7 @@ export const Page: React.FC<PageProps> = ({ config }) => {
 
       {mode === "insert" && (
         <InsertionInput
+          insertRef={insertRef}
           config={config}
           screenOffset={screenOffset}
           selectionStart={selectionStart}

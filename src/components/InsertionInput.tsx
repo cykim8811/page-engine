@@ -1,8 +1,9 @@
 // InsertionInput.tsx
-import React, { useCallback, useRef, useEffect } from 'react';
+import React, { useCallback, useEffect } from 'react';
 import { PageConfig } from "@/config";
 
 interface InsertionInputProps {
+    insertRef: React.RefObject<HTMLInputElement>;
     config: PageConfig;
     screenOffset: { x: number; y: number };
     selectionStart: { x: number; y: number };
@@ -12,6 +13,7 @@ interface InsertionInputProps {
 }
 
 export const InsertionInput: React.FC<InsertionInputProps> = ({
+    insertRef,
     config,
     screenOffset,
     selectionStart,
@@ -19,11 +21,12 @@ export const InsertionInput: React.FC<InsertionInputProps> = ({
     insertValue,
     setInsertValue,
 }) => {
-    const inputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
-        if (inputRef.current) {
-            inputRef.current.focus();
+        if (insertRef.current) {
+            setTimeout(() => {
+                insertRef.current?.focus();
+            }, 0);
         }
     }, []);
 
@@ -39,23 +42,26 @@ export const InsertionInput: React.FC<InsertionInputProps> = ({
             top: top * config.gridSize.height + screenOffset.y - 1,
             width: (right - left + 1) * config.gridSize.width + 3,
             height: (bottom - top + 1) * config.gridSize.height + 3,
-            backgroundColor: "#00000000",
+            backgroundColor: "#ffffff",
             borderColor: "#9ca3af",
             borderWidth: 3,
             transition: "background-color 0.05s, border-color 0.05s, left 0.05s, top 0.05s, width 0.05s, height 0.05s",
             outline: "none",
-            fontSize: config.gridSize.height - 2,
-            fontFamily: "monospace",
+            fontSize: config.gridSize.height * 0.7,
         };
     }, [selectionStart, selectionEnd, config.gridSize, screenOffset]);
 
     return (
-        <input
-            type="text"
+        <div
             style={insertionStyle()}
-            ref={inputRef}
-            value={insertValue}
-            onChange={(e) => setInsertValue(e.target.value)}
-        />
+        >
+            <input
+                type="text"
+                className="outline-none w-[calc(100%+32px)] h-full bg-transparent"
+                ref={insertRef}
+                value={insertValue}
+                onChange={(e) => setInsertValue(e.target.value)}
+            />
+        </div>
     );
 };

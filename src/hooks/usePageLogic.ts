@@ -1,11 +1,29 @@
-// usePageLogic.ts
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { useScroll } from "@/hooks/useScroll";
 import { PageConfig } from "@/config";
 import { CellData } from "../components/Cell";
 
+function getTextWidth(text: string, element: HTMLElement | null): number {
+    // canvas 요소 생성
+    const canvas = document.createElement('canvas');
+    const context = canvas.getContext('2d');
+
+    if (!context) {
+        console.error('Canvas 2D context를 생성할 수 없습니다.');
+        return 0;
+    }
+
+    const style = window.getComputedStyle(element || document.body);
+    context.font = style.font;
+
+    const metrics = context.measureText(text);
+    return metrics.width;
+}
+
+
 export const usePageLogic = (config: PageConfig) => {
     const { offset: rawScreenOffset, ref } = useScroll();
+    const insertRef = useRef<HTMLInputElement>(null);
     const screenOffset = {
         x: Math.round(rawScreenOffset.x / config.gridSize.width) * config.gridSize.width,
         y: Math.round(rawScreenOffset.y / config.gridSize.height) * config.gridSize.height,
@@ -16,6 +34,7 @@ export const usePageLogic = (config: PageConfig) => {
     const [isDragging, setIsDragging] = useState(false);
     const [mode, setMode] = useState<"select" | "insert">("select");
     const [insertValue, setInsertValue] = useState<string>("");
+    const [lastClickTime, setLastClickTime] = useState<number>(0);
 
     const cellData: { [key: string]: CellData } = {
         "10928": {
@@ -23,17 +42,30 @@ export const usePageLogic = (config: PageConfig) => {
             size: { width: 4, height: 4 },
         },
     };
+
     const handleMouseDown = useCallback((e: React.MouseEvent) => {
         const x = Math.floor((e.clientX + screenOffset.x) / config.gridSize.width);
         const y = Math.floor((e.clientY + screenOffset.y) / config.gridSize.height);
-        if (mode === "insert" && x >= selectionStart.x && x <= selectionEnd.x && y >= selectionStart.y && y <= selectionEnd.y) {
-            return;
+        const currentTime = new Date().getTime();
+        const timeDiff = currentTime - lastClickTime;
+
+        if (timeDiff < 300 && x === selectionStart.x && y === selectionStart.y) {
+            setSelectionStart({ x, y });
+            setSelectionEnd({ x, y });
+            setInsertValue("");
+            setMode("insert");
+        } else {
+            if (mode === "insert" && x >= selectionStart.x && x <= selectionEnd.x && y >= selectionStart.y && y <= selectionEnd.y) {
+                return;
+            }
+            setMode("select");
+            setSelectionStart({ x, y });
+            setSelectionEnd({ x, y });
+            setIsDragging(true);
         }
-        setMode("select");
-        setSelectionStart({ x, y });
-        setSelectionEnd({ x, y });
-        setIsDragging(true);
-    }, [screenOffset, config.gridSize]);
+
+        setLastClickTime(currentTime);
+    }, [screenOffset, config.gridSize, lastClickTime, selectionStart, mode, selectionEnd]);
 
     const handleMouseMove = useCallback((e: React.MouseEvent) => {
         if (!isDragging) return;
@@ -85,17 +117,8 @@ export const usePageLogic = (config: PageConfig) => {
     useEffect(() => {
         if (mode === "insert") {
             setSelectionEnd({
-                x: selectionStart.x + insertValue.length - 1,
-                y: selectionStart.y
-            });
-        }
-    }, [mode, selectionStart, insertValue]);
-
-    useEffect(() => {
-        if (mode === "insert") {
-            setSelectionEnd({
-                x: selectionStart.x + insertValue.length - 1,
-                y: selectionStart.y
+                x: selectionStart.x + Math.max(0, Math.floor(0.05 + getTextWidth(insertValue, insertRef.current) / config.gridSize.width)),
+                y: selectionStart.y,
             });
         }
     }, [mode, selectionStart, insertValue]);
@@ -109,6 +132,7 @@ export const usePageLogic = (config: PageConfig) => {
 
     return {
         ref,
+        insertRef,
         screenOffset,
         selectionStart,
         selectionEnd,
