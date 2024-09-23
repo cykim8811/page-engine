@@ -29,6 +29,7 @@ export const usePageLogic = (config: PageConfig) => {
         y: Math.round(rawScreenOffset.y / config.gridSize.height) * config.gridSize.height,
     };
 
+    const [cursorPos, setCursorPos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
     const [selectionStart, setSelectionStart] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
     const [selectionEnd, setSelectionEnd] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
     const [isDragging, setIsDragging] = useState(false);
@@ -52,6 +53,7 @@ export const usePageLogic = (config: PageConfig) => {
         const timeDiff = currentTime - lastClickTime;
 
         if (timeDiff < 300 && x === selectionStart.x && y === selectionStart.y) {
+            setCursorPos({ x, y });
             setSelectionStart({ x, y });
             setSelectionEnd({ x, y });
             setInsertValue("");
@@ -71,10 +73,12 @@ export const usePageLogic = (config: PageConfig) => {
             if (cellKey) {
                 const cell = cellData[cellKey];
                 setMode("select");
+                setCursorPos({ x, y });
                 setSelectionStart(cell.pos);
                 setSelectionEnd({ x: cell.pos.x + cell.size.width - 1, y: cell.pos.y + cell.size.height - 1 });
             } else {
                 setMode("select");
+                setCursorPos({ x, y });
                 setSelectionStart({ x, y });
                 setSelectionEnd({ x, y });
                 setIsDragging(true);
@@ -99,13 +103,29 @@ export const usePageLogic = (config: PageConfig) => {
     const handleKeyDown = useCallback((e: KeyboardEvent) => {
         if (mode === "select") {
             const moveSelection = (dx: number, dy: number) => {
-                const originalPos = e.shiftKey ? selectionEnd : selectionStart;
+                const originalPos = e.shiftKey ? selectionEnd : cursorPos;
                 const newPos = { x: originalPos.x + dx, y: originalPos.y + dy };
                 if (e.shiftKey) {
                     setSelectionEnd(newPos);
                 } else {
-                    setSelectionStart(newPos);
-                    setSelectionEnd(newPos);
+                    setCursorPos(newPos);
+                    // Check if newPos is in the cell
+                    let cellKey = "";
+                    for (const key in cellData) {
+                        const cell = cellData[key];
+                        if (newPos.x >= cell.pos.x && newPos.x < cell.pos.x + cell.size.width && newPos.y >= cell.pos.y && newPos.y < cell.pos.y + cell.size.height) {
+                            cellKey = key;
+                            break;
+                        }
+                    }
+                    if (cellKey) {
+                        const cell = cellData[cellKey];
+                        setSelectionStart(cell.pos);
+                        setSelectionEnd({ x: cell.pos.x + cell.size.width - 1, y: cell.pos.y + cell.size.height - 1 });
+                    } else {
+                        setSelectionStart(newPos);
+                        setSelectionEnd(newPos);
+                    }
                 }
             };
 
@@ -161,6 +181,7 @@ export const usePageLogic = (config: PageConfig) => {
                         value: insertValue,
                     },
                 });
+                setCursorPos({ x: selectionStart.x, y: selectionStart.y });
                 setSelectionStart({ x: selectionStart.x, y: selectionStart.y });
                 setInsertValue("");
                 setMode("select");
@@ -190,6 +211,7 @@ export const usePageLogic = (config: PageConfig) => {
         screenOffset,
         selectionStart,
         selectionEnd,
+        cursorPos,
         mode,
         insertValue,
         cellData,

@@ -8,9 +8,10 @@ interface SelectionProps {
     screenOffset: { x: number; y: number };
     selectionStart: { x: number; y: number };
     selectionEnd: { x: number; y: number };
+    cursorPos: { x: number; y: number };
 }
 
-export const Selection: React.FC<SelectionProps> = ({ mode, config, screenOffset, selectionStart, selectionEnd }) => {
+export const Selection: React.FC<SelectionProps> = ({ mode, config, screenOffset, selectionStart, selectionEnd, cursorPos }) => {
     const selectionStyle = useCallback(() => {
         const left = Math.min(selectionStart.x, selectionEnd.x);
         const top = Math.min(selectionStart.y, selectionEnd.y);
@@ -30,22 +31,22 @@ export const Selection: React.FC<SelectionProps> = ({ mode, config, screenOffset
         };
     }, [selectionStart, selectionEnd, config.gridSize, screenOffset, mode]);
 
-    const selectionStartStyle = useCallback(() => {
+    const selectionCursorStyle = useCallback(() => {
         return {
             position: "absolute" as const,
-            left: selectionStart.x * config.gridSize.width + screenOffset.x + 1,
-            top: selectionStart.y * config.gridSize.height + screenOffset.y + 1,
+            left: cursorPos.x * config.gridSize.width + screenOffset.x + 1,
+            top: cursorPos.y * config.gridSize.height + screenOffset.y + 1,
             width: config.gridSize.width - 1,
             height: config.gridSize.height - 1,
             backgroundColor: "#bfdbfe40",
             transition: "background-color 0.05s, border-color 0.05s, left 0.05s, top 0.05s, width 0.05s, height 0.05s",
         };
-    }, [selectionStart, config.gridSize, screenOffset]);
+    }, [cursorPos, config.gridSize, screenOffset]);
 
     return (
         <>
             <div style={selectionStyle()} />
-            {mode === "select" && <div style={selectionStartStyle()} />}
+            {mode === "select" && <div style={selectionCursorStyle()} />}
         </>
     );
 };

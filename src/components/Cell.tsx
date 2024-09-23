@@ -32,7 +32,7 @@ const Cell: React.FC<CellProps> = (props) => {
         paddingLeft: 2,
     };
     return (
-        <div className="bg-white border border-gray-700 select-none" style={cellStyle}>
+        <div className="bg-white border border-gray-500 select-none" style={cellStyle}>
             {props.cellData.value}
         </div>
     );

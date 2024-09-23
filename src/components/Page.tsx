@@ -17,6 +17,7 @@ export const Page: React.FC<PageProps> = ({ config }) => {
     screenOffset,
     selectionStart,
     selectionEnd,
+    cursorPos,
     mode,
     insertValue,
     cellData,
@@ -48,6 +49,7 @@ export const Page: React.FC<PageProps> = ({ config }) => {
         screenOffset={screenOffset}
         selectionStart={selectionStart}
         selectionEnd={selectionEnd}
+        cursorPos={cursorPos}
       />
 
       {mode === "insert" && (
