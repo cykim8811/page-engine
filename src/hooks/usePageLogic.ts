@@ -42,9 +42,15 @@ export const usePageLogic = (config: PageConfig) => {
 
     const [cellData, setCellData] = useState<{ [key: string]: CellData }>({
         "10928": {
-            pos: { x: 1, y: 1 },
-            size: { width: 4, height: 4 },
+            pos: { x: 8, y: 5 },
+            size: { width: 5, height: 3 },
             value: "Hello, World!",
+            children: ["10929"],
+        },
+        "10929": {
+            pos: { x: 9, y: 6 },
+            size: { width: 3, height: 1 },
+            value: "Hello!",
         },
     });
 
@@ -128,8 +134,9 @@ export const usePageLogic = (config: PageConfig) => {
                 setSelectionStart(cell.pos);
                 setSelectionEnd({ x: cell.pos.x + cell.size.width - 1, y: cell.pos.y + cell.size.height - 1 });
                 setIsMovingDragging(true);
-                setMovingDraggingTarget(cellKey);
-                setMovingDraggingOffset({ x: x - cell.pos.x, y: y - cell.pos.y });
+                const moveTarget = getLargestCellAt(x, y) || cellKey;
+                setMovingDraggingTarget(moveTarget);
+                setMovingDraggingOffset({ x: x - cellData[moveTarget].pos.x, y: y - cellData[moveTarget].pos.y });
             } else {
                 setMode("select");
                 setCursorPos({ x, y });
@@ -158,6 +165,16 @@ export const usePageLogic = (config: PageConfig) => {
                     ...cell,
                     pos: { x: x - movingDraggingOffset.x, y: y - movingDraggingOffset.y },
                 };
+                for (const childKey of cell.children || []) {
+                    const child = cellData[childKey];
+                    newCellData[childKey] = {
+                        ...child,
+                        pos: {
+                            x: child.pos.x + x - cell.pos.x - movingDraggingOffset.x,
+                            y: child.pos.y + y - cell.pos.y - movingDraggingOffset.y,
+                        },
+                    };
+                }
                 setCellData(newCellData);
                 setCursorPos({ x, y });
                 setSelectionStart({ x: x - movingDraggingOffset.x, y: y - movingDraggingOffset.y });
@@ -192,6 +209,16 @@ export const usePageLogic = (config: PageConfig) => {
                             y: cell.pos.y + dy,
                         }
                     };
+                    for (const childKey of cell.children || []) {
+                        const child = cellData[childKey];
+                        newCellData[childKey] = {
+                            ...child,
+                            pos: {
+                                x: child.pos.x + dx,
+                                y: child.pos.y + dy,
+                            }
+                        };
+                    }
                     setCellData(newCellData);
                     setCursorPos(newPos);
                     setSelectionStart((prev) => ({ x: prev.x + dx, y: prev.y + dy }));
