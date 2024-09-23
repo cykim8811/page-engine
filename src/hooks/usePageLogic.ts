@@ -49,56 +49,38 @@ export const usePageLogic = (config: PageConfig) => {
 
     const handleKeyDown = useCallback((e: KeyboardEvent) => {
         if (mode === "select") {
-            if (e.key === "i") {
-                setMode("insert");
-                setSelectionEnd(selectionStart);
-            } else if (e.key === "ArrowLeft" || e.key === "h") {
+            const moveSelection = (dx: number, dy: number) => {
+                const originalPos = e.shiftKey ? selectionEnd : selectionStart;
+                const newPos = { x: originalPos.x + dx, y: originalPos.y + dy };
                 if (e.shiftKey) {
-                    setSelectionEnd((prev) => ({ x: prev.x - 1, y: prev.y }));
+                    setSelectionEnd(newPos);
                 } else {
-                    setSelectionStart((prev) => {
-                        const result = { x: prev.x - 1, y: prev.y };
-                        setSelectionEnd(result);
-                        return result;
-                    });
+                    setSelectionStart(newPos);
+                    setSelectionEnd(newPos);
                 }
-            } else if (e.key === "ArrowRight" || e.key === "l") {
-                if (e.shiftKey) {
-                    setSelectionEnd((prev) => ({ x: prev.x + 1, y: prev.y }));
-                } else {
-                    setSelectionStart((prev) => {
-                        const result = { x: prev.x + 1, y: prev.y };
-                        setSelectionEnd(result);
-                        return result;
-                    });
-                }
-            } else if (e.key === "ArrowUp" || e.key === "k") {
-                if (e.shiftKey) {
-                    setSelectionEnd((prev) => ({ x: prev.x, y: prev.y - 1 }));
-                } else {
-                    setSelectionStart((prev) => {
-                        const result = { x: prev.x, y: prev.y - 1 };
-                        setSelectionEnd(result);
-                        return result;
-                    });
-                }
-            } else if (e.key === "ArrowDown" || e.key === "j") {
-                if (e.shiftKey) {
-                    setSelectionEnd((prev) => ({ x: prev.x, y: prev.y + 1 }));
-                } else {
-                    setSelectionStart((prev) => {
-                        const result = { x: prev.x, y: prev.y + 1 };
-                        setSelectionEnd(result);
-                        return result;
-                    });
-                }
-            }
-        } else if (mode === "insert") {
-            if (e.key === "Escape") {
-                setMode("select");
-            }
+            };
+
+            const keyActions: { [key: string]: () => void } = {
+                'i': () => {
+                    setMode("insert");
+                    setSelectionEnd(selectionStart);
+                },
+                'ArrowLeft': () => moveSelection(-1, 0),
+                'h': () => moveSelection(-1, 0),
+                'ArrowRight': () => moveSelection(1, 0),
+                'l': () => moveSelection(1, 0),
+                'ArrowUp': () => moveSelection(0, -1),
+                'k': () => moveSelection(0, -1),
+                'ArrowDown': () => moveSelection(0, 1),
+                'j': () => moveSelection(0, 1),
+            };
+
+            const action = keyActions[e.key];
+            if (action) action();
+        } else if (mode === "insert" && e.key === "Escape") {
+            setMode("select");
         }
-    }, [mode, selectionStart, setSelectionStart, setSelectionEnd]);
+    }, [mode, selectionStart, setSelectionStart, setSelectionEnd, setMode, selectionEnd]);
 
     useEffect(() => {
         if (mode === "insert") {
