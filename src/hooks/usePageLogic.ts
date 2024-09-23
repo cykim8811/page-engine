@@ -40,12 +40,14 @@ export const usePageLogic = (config: PageConfig) => {
         "10928": {
             pos: { x: 1, y: 1 },
             size: { width: 4, height: 4 },
+            value: "Hello, World!",
         },
     });
 
     const handleMouseDown = useCallback((e: React.MouseEvent) => {
-        const x = Math.floor((e.clientX + screenOffset.x) / config.gridSize.width);
-        const y = Math.floor((e.clientY + screenOffset.y) / config.gridSize.height);
+        if (e.button !== 0) return;
+        const x = Math.floor((e.clientX - screenOffset.x) / config.gridSize.width);
+        const y = Math.floor((e.clientY - screenOffset.y) / config.gridSize.height);
         const currentTime = new Date().getTime();
         const timeDiff = currentTime - lastClickTime;
 
@@ -85,8 +87,8 @@ export const usePageLogic = (config: PageConfig) => {
     const handleMouseMove = useCallback((e: React.MouseEvent) => {
         if (!isDragging) return;
 
-        const x = Math.floor((e.clientX + screenOffset.x) / config.gridSize.width);
-        const y = Math.floor((e.clientY + screenOffset.y) / config.gridSize.height);
+        const x = Math.floor((e.clientX - screenOffset.x) / config.gridSize.width);
+        const y = Math.floor((e.clientY - screenOffset.y) / config.gridSize.height);
         setSelectionEnd({ x, y });
     }, [isDragging, screenOffset, config.gridSize]);
 
@@ -112,20 +114,37 @@ export const usePageLogic = (config: PageConfig) => {
                     setMode("insert");
                     setSelectionEnd(selectionStart);
                 },
-                'ArrowLeft': () => moveSelection(-1, 0),
+                'arrowleft': () => moveSelection(-1, 0),
                 'h': () => moveSelection(-1, 0),
-                'ArrowRight': () => moveSelection(1, 0),
+                'arrowright': () => moveSelection(1, 0),
                 'l': () => moveSelection(1, 0),
-                'ArrowUp': () => moveSelection(0, -1),
+                'arrowup': () => moveSelection(0, -1),
                 'k': () => moveSelection(0, -1),
-                'ArrowDown': () => moveSelection(0, 1),
+                'arrowdown': () => moveSelection(0, 1),
                 'j': () => moveSelection(0, 1),
             };
 
-            const action = keyActions[e.key];
+            const action = keyActions[e.key.toLowerCase()];
             if (action) action();
-        } else if (mode === "insert" && e.key === "Escape") {
-            setMode("select");
+        } else if (mode === "insert") {
+            if (e.key === "Escape") {
+                setMode("select");
+            } else if (e.key === "Enter") {
+                const cellKey = Object.keys(cellData).length + 1;
+                setCellData({
+                    ...cellData,
+                    [cellKey]: {
+                        pos: selectionStart,
+                        size: {
+                            width: selectionEnd.x - selectionStart.x + 1,
+                            height: selectionEnd.y - selectionStart.y + 1,
+                        },
+                        value: insertValue,
+                    },
+                });
+                setInsertValue("");
+                setMode("select");
+            }
         }
     }, [mode, selectionStart, setSelectionStart, setSelectionEnd, setMode, selectionEnd]);
 

@@ -10,6 +10,7 @@ export interface CellData {
         width: number;
         height: number;
     };
+    value: string;
 };
 
 export interface CellProps {
@@ -27,9 +28,12 @@ const Cell: React.FC<CellProps> = (props) => {
         width: `${props.cellData.size.width * props.config.gridSize.width + 1}px`,
         height: `${props.cellData.size.height * props.config.gridSize.height + 1}px`,
         transition: "left 0.05s, top 0.05s",
+        fontSize: props.config.gridSize.height * 0.7,
+        paddingLeft: 2,
     };
     return (
-        <div className="bg-white border border-gray-700" style={cellStyle}>
+        <div className="bg-white border border-gray-700 select-none" style={cellStyle}>
+            {props.cellData.value}
         </div>
     );
 }
