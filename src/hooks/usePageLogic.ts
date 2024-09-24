@@ -20,6 +20,20 @@ function getTextWidth(text: string, element: HTMLElement | null): number {
     return metrics.width;
 }
 
+const name_db = [
+    'lorem', 'ipsum', 'dolor', 'sit', 'amet', 'consectetur', 'adipiscing', 'elit', 'sed', 'do', 'eiusmod', 'tempor', 'incididunt', 'ut', 'labore', 'et', 'dolore', 'magna', 'aliqua', 'enim', 'ad', 'minim', 'veniam', 'quis', 'nostrud', 'exercitation', 'ullamco', 'laboris', 'nisi', 'ut', 'aliquip', 'ex', 'ea', 'commodo', 'consequat', 'duis', 'aute', 'irure', 'dolor', 'in', 'reprehenderit', 'in', 'voluptate', 'velit', 'esse', 'cillum', 'dolore', 'eu', 'fugiat', 'nulla', 'pariatur', 'excepteur', 'sint', 'occaecat', 'cupidatat', 'non', 'proident', 'sunt', 'in', 'culpa', 'qui', 'officia', 'deserunt', 'mollit', 'anim', 'id', 'est', 'laborum'
+];
+function createNewCellKeyName(excludeKeys: string[] = []): string {
+    let postfix = 0;
+    while (true) {
+        for (const name of name_db) {
+            const key = name + (postfix === 0 ? '' : postfix);
+            if (!excludeKeys.includes(key)) {
+                return key;
+            }
+        }
+    }
+}
 
 export const usePageLogic = (config: PageConfig) => {
     const { offset: rawScreenOffset, ref } = useScroll();
@@ -39,6 +53,9 @@ export const usePageLogic = (config: PageConfig) => {
     const [mode, setMode] = useState<"select" | "insert">("select");
     const [insertValue, setInsertValue] = useState<string>("");
     const [lastClickTime, setLastClickTime] = useState<number>(0);
+
+    const [hoveringCell, setHoveringCell] = useState<string | null>(null);
+    const [cursorHoveringCell, setCursorHoveringCell] = useState<string | null>(null);
 
     const [cellData, setCellData] = useState<{ [key: string]: CellData }>({
         "10928": {
@@ -108,7 +125,7 @@ export const usePageLogic = (config: PageConfig) => {
             return;
         } else if (mode === "insert") {
             if (insertValue !== "") {
-                const newCellKey = Object.keys(cellData).length + 1;
+                const newCellKey = createNewCellKeyName(Object.keys(cellData));
                 setCellData({
                     ...cellData,
                     [newCellKey]: {
@@ -150,14 +167,18 @@ export const usePageLogic = (config: PageConfig) => {
     }, [screenOffset, config.gridSize, lastClickTime, selectionStart, mode, selectionEnd]);
 
     const handleMouseMove = useCallback((e: React.MouseEvent) => {
+        const x = Math.floor((e.clientX - screenOffset.x) / config.gridSize.width);
+        const y = Math.floor((e.clientY - screenOffset.y) / config.gridSize.height);
+
+        const hoveringCellKey = getLargestCellAt(x, y);
+        if (hoveringCellKey !== hoveringCell) {
+            setHoveringCell(hoveringCellKey || null);
+        }
+
         if (isSelectingDragging) {
-            const x = Math.floor((e.clientX - screenOffset.x) / config.gridSize.width);
-            const y = Math.floor((e.clientY - screenOffset.y) / config.gridSize.height);
             setCursorPos({ x, y });
             setSelectionEnd({ x, y });
         } else if (isMovingDragging) {
-            const x = Math.floor((e.clientX - screenOffset.x) / config.gridSize.width);
-            const y = Math.floor((e.clientY - screenOffset.y) / config.gridSize.height);
             if (movingDraggingTarget) {
                 const cell = cellData[movingDraggingTarget];
                 const newCellData = { ...cellData };
@@ -182,6 +203,15 @@ export const usePageLogic = (config: PageConfig) => {
             }
         }
     }, [isSelectingDragging, screenOffset, config.gridSize, cellData, movingDraggingOffset]);
+
+    useEffect(() => {
+        const x = cursorPos.x;
+        const y = cursorPos.y;
+        const cursorHoveringCellKey = getLargestCellAt(x, y);
+        if (cursorHoveringCellKey !== cursorHoveringCell) {
+            setCursorHoveringCell(cursorHoveringCellKey || null);
+        }
+    }, [cursorPos, cellData]);
 
     const handleMouseUp = useCallback(() => {
         setIsSelectingDragging(false);
@@ -280,7 +310,7 @@ export const usePageLogic = (config: PageConfig) => {
                 setMode("select");
             } else if (e.key === "Enter") {
                 if (insertValue !== "") {
-                    const newCellKey = Object.keys(cellData).length + 1;
+                    const newCellKey = createNewCellKeyName(Object.keys(cellData));
                     setCellData({
                         ...cellData,
                         [newCellKey]: {
@@ -321,6 +351,8 @@ export const usePageLogic = (config: PageConfig) => {
         ref,
         insertRef,
         screenOffset,
+        hoveringCell,
+        cursorHoveringCell,
         selectionStart,
         selectionEnd,
         cursorPos,

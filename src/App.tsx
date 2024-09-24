@@ -3,8 +3,8 @@ import { PageConfig } from "./config";
 
 const config: PageConfig = {
   gridSize: {
-    width: 24,
-    height: 24,
+    width: 32,
+    height: 32,
   },
 };
 

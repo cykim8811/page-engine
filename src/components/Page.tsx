@@ -1,10 +1,10 @@
-import React from 'react';
+import React from "react";
 import { PageConfig } from "@/config";
 import Cell from "./Cell";
-import { usePageLogic } from '../hooks/usePageLogic';
-import { Selection } from '../components/Selection';
-import { InsertionInput } from '../components/InsertionInput';
-import { useGridStyle } from '../hooks/useGridStyle';
+import { usePageLogic } from "../hooks/usePageLogic";
+import { Selection } from "../components/Selection";
+import { InsertionInput } from "../components/InsertionInput";
+import { useGridStyle } from "../hooks/useGridStyle";
 
 export interface PageProps {
   config: PageConfig;
@@ -17,6 +17,8 @@ export const Page: React.FC<PageProps> = ({ config }) => {
     screenOffset,
     selectionStart,
     selectionEnd,
+    hoveringCell,
+    cursorHoveringCell,
     cursorPos,
     mode,
     insertValue,
@@ -40,7 +42,14 @@ export const Page: React.FC<PageProps> = ({ config }) => {
       onMouseLeave={handleMouseUp}
     >
       {Object.entries(cellData).map(([key, data]) => (
-        <Cell key={key} cellData={data} config={config} screenOffset={screenOffset} />
+        <Cell
+          key={key}
+          showTip={hoveringCell === key || cursorHoveringCell === key}
+          name={key}
+          cellData={data}
+          config={config}
+          screenOffset={screenOffset}
+        />
       ))}
 
       <Selection
